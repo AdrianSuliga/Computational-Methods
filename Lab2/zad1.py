@@ -1,26 +1,26 @@
 import numpy as np
-from random import randint
+from random import random
 import matplotlib.pyplot as plt
 from time import time
 
 def zad1(A: np.array):
     n = len(A)
     for i in range(n):
+        index_to_swap = i
         for j in range(i + 1, n):
-            # If there is 0 on a diagonal
-            # than swap the rows and continue
-            if A[i][i] < 10 ** -10:
-                A[[i, j]] = A[[j, i]]
-                continue
+            if abs(A[j][i]) > abs(A[index_to_swap][i]):
+                index_to_swap = j
 
+        A[i], A[index_to_swap] = A[index_to_swap], A[i]
+
+        if abs(A[i][i]) < 1e-12:
+            return np.full(n, None)
+
+        for j in range(i + 1, n):
             factor = A[j][i] / A[i][i]
             
             for k in range(i, n + 1):
                 A[j][k] -= factor * A[i][k]
-    
-    for i in range(n):
-        if A[i][i] < 10 ** -10:
-            return np.full(n, None)
 
     res_vec = np.zeros(n)
     
@@ -32,20 +32,41 @@ def zad1(A: np.array):
     return res_vec
 
 xs = []
-ys = []
+y_my_implementation = []
+y_library = []
 
-for n in range(500, 1001):
-    A = np.array([[randint(0, 100) for _ in range(n + 1)] for _ in range(n)])
+for n in range(500, 1001, 50):
+    A = np.array([[random() for _ in range(n + 1)] for _ in range(n)])
+    B = np.array([[A[i][j] for j in range(n)] for i in range(n)])
+    X = np.array([A[i][n] for i in range(n)])
+
     A = A.astype(np.float64)
+    B = B.astype(np.float64)
+    X = X.astype(np.float64)
+
     start = time()
     zad1(A)
     end = time()
+    y_my_implementation.append(end - start)
 
+    start = time()
+    np.linalg.solve(B, X)
+    end = time()
+    y_library.append(end - start)
+    
     xs.append(n)
-    ys.append(end - start)
 
-xp = np.array(xs)
-yp = np.array(ys)
+fig, axs = plt.subplots(2)
 
-plt.plot(xp, yp)
+axs[0].plot(xs, y_my_implementation)
+axs[0].set_title("Czas mojej implementacji")
+axs[0].set_xlabel("Rozmiar macierzy")
+axs[0].set_ylabel("Czas wykonania")
+
+axs[1].plot(xs, y_library)
+axs[1].set_title("Czas implementacji z biblioteki")
+axs[1].set_xlabel("Rozmiar macierzy")
+axs[1].set_ylabel("Czas wykonania")
+
+plt.tight_layout()
 plt.show()
