@@ -35,7 +35,7 @@ xs = []
 y_my_implementation = []
 y_library = []
 
-for n in range(500, 1001, 50):
+for n in range(500, 551, 50):
     A = np.array([[random() for _ in range(n + 1)] for _ in range(n)])
     B = np.array([[A[i][j] for j in range(n)] for i in range(n)])
     X = np.array([A[i][n] for i in range(n)])
@@ -43,6 +43,8 @@ for n in range(500, 1001, 50):
     A = A.astype(np.float64)
     B = B.astype(np.float64)
     X = X.astype(np.float64)
+
+    A = np.ascontiguousarray(A)
 
     start = time()
     zad1(A)
