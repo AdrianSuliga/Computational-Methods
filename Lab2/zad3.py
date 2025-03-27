@@ -1,6 +1,8 @@
 import numpy as np
 import networkx as nx
 import matplotlib.pyplot as plt
+from random import randint
+from collections import deque
 
 def readGraph(path: str):
     file = open(path, "r")
@@ -12,25 +14,7 @@ def readGraph(path: str):
      
     return E
 
-def list_form(E):
-    n = graph_size_from_list(E)
-    G = [[] for _ in range(n)]
-
-    for edge in E:
-        G[edge[0]].append((edge[1], edge[2]))
-        G[edge[1]].append((edge[0], edge[2]))
-
-    return G
-
-def graph_size_from_list(E):
-    size = 0
-
-    for u, v, _ in E:
-        size = max(size, u, v)
-    
-    return size + 1
-
-def drawGraph(Edges, Weights, Currents):
+def drawGraph(Edges, Weights, Currents, seed, sem_nodes):
     G = nx.DiGraph()
 
     for u, v, _ in Edges:
@@ -40,48 +24,128 @@ def drawGraph(Edges, Weights, Currents):
         elif u < v and w >= 0: G.add_edge(u, v, weight = w)
         elif u > v and w >= 0: G.add_edge(v, u, weight = w)
         
-    pos = nx.spring_layout(G, seed = 89)
-    nx.draw_networkx_nodes(G, pos, node_color="lightblue", edgecolors="black")
-    nx.draw_networkx_edges(G, pos, arrowstyle="->", arrowsize=15)
-    nx.draw_networkx_labels(G, pos, font_size=12, font_color="black")
+    pos = nx.spring_layout(G, k=1.0, seed=seed, scale=5)
 
-    edge_labels = {(u, v): f"{w:.2f}" for u, v, w in G.edges(data="weight")}
-    nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels)
-    plt.tight_layout()
+    node_colors = ["lightgreen" if node in sem_nodes else "lightblue" for node in G.nodes]
+
+    nx.draw_networkx_nodes(G, pos, node_color=node_colors, edgecolors="black")
+    nx.draw_networkx_edges(G, pos, arrowstyle="->", arrowsize=10)
+    nx.draw_networkx_labels(G, pos, font_size=10, font_color="darkblue")
+
+    edge_labels = {(u, v): f"{w:.2f} A" for u, v, w in G.edges(data="weight")}
+    nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels, font_size=8)
+
     plt.show()
 
-def findCycleFrom(G:list, u:int, path:list, cycles:list, size:int):
-    for v, _ in G[u]:
-        if v not in path:
-            findCycleFrom(G, v, [v] + path, cycles, size)
-        elif v == path[-1] and len(path) > 2:
-            min_index = path.index(min(path))
-            path = path[min_index:] + path[:min_index]
-            inv = [path[0]] + path[1:][::-1]
-            if path not in cycles and inv not in cycles and len(cycles) < size:
-                cycles.append(path)
+def draw2DGraph(Edges, Weights, Currents, sem_nodes):
+    G = nx.DiGraph()
+
+    for u, v, _ in Edges:
+        w = Weights[Currents[u][v]]
+        if u < v and w < 0: G.add_edge(v, u, weight = abs(w))
+        elif u > v and w < 0: G.add_edge(u, v, weight = abs(w))
+        elif u < v and w >= 0: G.add_edge(u, v, weight = w)
+        elif u > v and w >= 0: G.add_edge(v, u, weight = w)
+        
+    n = int(np.sqrt(len(set(G.nodes)))) 
+    pos = {i: (i % n, -i // n) for i in G.nodes}  
+
+    node_colors = ["lightgreen" if node in sem_nodes else "lightblue" for node in G.nodes]
+
+    nx.draw_networkx_nodes(G, pos, node_color=node_colors, edgecolors="black")
+    nx.draw_networkx_edges(G, pos, edge_color="black", arrowstyle="->", arrowsize=10)
+    nx.draw_networkx_labels(G, pos, font_size=10, font_color="darkblue")
+
+    edge_labels = {(u, v): f"{w:.2f} A" for u, v, w in G.edges(data="weight")}
+    nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels, font_size=8)
+
+    plt.show()
+
+def listForm(E):
+    n = graphSizeFromList(E)
+    G = [[] for _ in range(n)]
+
+    for edge in E:
+        G[edge[0]].append((edge[1], edge[2]))
+        G[edge[1]].append((edge[0], edge[2]))
+
+    return G
+
+def graphSizeFromList(E):
+    size = 0
+
+    for u, v, _ in E:
+        size = max(size, u, v)
+    
+    return size + 1
+
+def parentToCycle(Parent, start, end):
+    result = [end]
+    while end != start:
+        end = Parent[end]
+        result.append(end)
+    return result
+
+def removeEdgeFromListForm(G, u, v):
+    G[u] = [n for n in G[u] if n[0] != v]
+    G[v] = [n for n in G[v] if n[0] != u]
+
+def findCycleFrom(G, start, end):
+    # Usuń połączenie pomiędzy start i end aby nie
+    # powodowało zbyt wczesnego wykrycia cyklu
+    removeEdgeFromListForm(G, start, end)
+
+    V = len(G)
+    Q = deque()
+    Q.append(start)
+    parent = [None for _ in range(V)]
+    visited = [False for _ in range(V)]
+    visited[start] = True
+
+    while Q:
+        vertex = Q.pop()
+        for v, _ in G[vertex]:
+            if v == end:
+                parent[end] = vertex
+                parent[start] = end
+                return parent
+            if not visited[v]:
+                Q.append(v)
+                visited[v] = True
+                parent[v] = vertex
+    
+    # Nie udało się znaleźć cyklu
+    return None
 
 def findCycles(G, size):
+    cycle_count = 0
     cycles = []
-    n = len(G)
 
-    for u in range(n):
-        findCycleFrom(G, u, [u], cycles, size)
-        if len(cycles) == size: break
-
-    if len(cycles) < size:
-        print("Nie można znaleźć wystarczająco dużo cykli!")
+    for u in range(len(G)):
+        for v, _ in G[u]:
+            result = findCycleFrom(G, u, v)
+            if result != None:
+                cycle_count += 1
+                cycles.append(parentToCycle(result, u, v))
+                removeEdgeFromListForm(G, u, v)
+            if cycle_count == size:
+                return cycles
     
-    return cycles
+    # Nie udało się znaleźć odpowiedniej ilości cykli,
+    # więc nie można rozwiązać równania
+    return None
 
 def findPath(G, start, end):
     def dfsVisit(G, u, end, visited, path):
         visited[u] = True
+        if u == end: return path
+
         for v, _ in G[u]:
-            if v == end:
-                return path + [v]
             if not visited[v]:
-                return dfsVisit(G, v, end, visited, path + [v])
+                result = dfsVisit(G, v, end, visited, path + [v])
+                if result is not None: return result
+        
+        return None
 
     n = len(G)
     visited = [False for _ in range(n)]
@@ -101,8 +165,8 @@ def edgesToCurrents(V, Edges):
 
     return Currents
 
-def zad3Kirchoff(Edges, s, t, SEM):
-    G = list_form(Edges)
+def zad3Kirchoff(Edges, s, t, SEM, seed, NetGraph = False):
+    G = listForm(Edges)
     E = len(Edges)
     V = len(G)
 
@@ -118,7 +182,9 @@ def zad3Kirchoff(Edges, s, t, SEM):
     # Ścieżka z SEM
     SEM_path = findPath(G, s, t)
     for i in range(len(SEM_path) - 1):
-        Eqs[eq_row][Currents[SEM_path[i]][SEM_path[i + 1]]] = Edges[Currents[SEM_path[i]][SEM_path[i + 1]]][2] * (1 if SEM_path[i] > SEM_path[i + 1] else -1)
+        Eqs[eq_row][Currents[SEM_path[i]][SEM_path[i + 1]]] = \
+        Edges[Currents[SEM_path[i]][SEM_path[i + 1]]][2] * \
+        (1 if SEM_path[i] > SEM_path[i + 1] else -1)
     eq_row += 1
 
     # 1. prawo Kirchoffa
@@ -130,22 +196,34 @@ def zad3Kirchoff(Edges, s, t, SEM):
         eq_row += 1
 
     # 2. prawo Kirchoffa
-    Cycles = findCycles(G, E - V + 1)
+    Cycles = findCycles(listForm(Edges), E - V + 1)
+    
+    if Cycles is None:
+        print("Nie można rozwiązać układu, za mało równań")
+        return
 
     for cycle in Cycles:
         cycle = cycle + [cycle[0]]
         cycle_len = len(cycle)
 
         for i in range(cycle_len - 1):
-            Eqs[eq_row][Currents[cycle[i]][cycle[i + 1]]] = Edges[Currents[cycle[i]][cycle[i + 1]]][2] * (1 if cycle[i] > cycle[i + 1] else -1)
+            Eqs[eq_row][Currents[cycle[i]][cycle[i + 1]]] = \
+            Edges[Currents[cycle[i]][cycle[i + 1]]][2] * \
+            (1 if cycle[i] > cycle[i + 1] else -1)
         eq_row += 1
 
     Weights = np.linalg.solve(Eqs, A)
+
     print("Wyliczone natężenia:")
     print(Weights)
 
-    drawGraph(Edges, Weights, Currents)
+    if NetGraph: draw2DGraph(Edges, Weights, Currents, [s,t])
+    else: drawGraph(Edges, Weights, Currents, seed, [s,t])
 
-zad3Kirchoff(readGraph("input/graph1.txt"), 1, 3, 200)
-zad3Kirchoff(readGraph("input/graph2.txt"), 0, 1, 50)
-
+zad3Kirchoff(readGraph("input/graph1.txt"), s = 0, t = 1, SEM = 200, seed = 25)
+zad3Kirchoff(readGraph("input/graph2.txt"), s = 2, t = 1, SEM = 100, seed = 19)
+zad3Kirchoff(readGraph("input/graph_erdos_renyi.txt"), s = 0, t = 1, SEM = 200, seed = 31)
+zad3Kirchoff(readGraph("input/graph_cubical.txt"), s = 0, t = 1, SEM = 100, seed = 2)
+zad3Kirchoff(readGraph("input/graph_bridge.txt"), s = 0, t = 12, SEM = 200, seed = 173)
+zad3Kirchoff(readGraph("input/graph_2d_net.txt"), s = 0, t = 1, SEM = 1000, seed = 10, NetGraph = True)
+zad3Kirchoff(readGraph("input/graph_small_world.txt"), s = 2, t = 3, SEM = 500, seed = 1, NetGraph = True)
