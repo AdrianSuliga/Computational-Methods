@@ -165,6 +165,19 @@ def edgesToCurrents(V, Edges):
 
     return Currents
 
+def testGraph(G, CurrentIdx, Currents, s, t):
+    V = len(G)
+
+    for u in range(V):
+        if u == s or u == t: continue
+        sum = 0
+        for v, _ in G[u]:
+            if u < v: sum -= Currents[CurrentIdx[u][v]]
+            elif u > v: sum += Currents[CurrentIdx[u][v]]
+        if abs(sum) > 1e-12: return False
+
+    return True
+
 def zad3Kirchoff(Edges, s, t, SEM, seed, NetGraph = False):
     G = listForm(Edges)
     E = len(Edges)
@@ -173,7 +186,7 @@ def zad3Kirchoff(Edges, s, t, SEM, seed, NetGraph = False):
     Eqs = [[0 for _ in range(E)] for _ in range(E)]
     Currents = edgesToCurrents(V, Edges)
 
-    # Wektor wyników
+    # Wektor wyrazów wolnych
     A = [0 for _ in range(E)]
     A[0] = SEM
 
@@ -208,22 +221,87 @@ def zad3Kirchoff(Edges, s, t, SEM, seed, NetGraph = False):
 
         for i in range(cycle_len - 1):
             Eqs[eq_row][Currents[cycle[i]][cycle[i + 1]]] = \
-            Edges[Currents[cycle[i]][cycle[i + 1]]][2] * \
-            (1 if cycle[i] > cycle[i + 1] else -1)
+                Edges[Currents[cycle[i]][cycle[i + 1]]][2] * \
+                (1 if cycle[i] > cycle[i + 1] else -1)
+            
         eq_row += 1
 
+    # Obliczenie natężeń prądów
     Weights = np.linalg.solve(Eqs, A)
 
     print("Wyliczone natężenia:")
     print(Weights)
 
+    if not testGraph(G, Currents, Weights, s, t):
+        print("Błąd w rozwiązaniu")
+        return
+
     if NetGraph: draw2DGraph(Edges, Weights, Currents, [s,t])
     else: drawGraph(Edges, Weights, Currents, seed, [s,t])
 
-zad3Kirchoff(readGraph("input/graph1.txt"), s = 0, t = 1, SEM = 200, seed = 25)
-zad3Kirchoff(readGraph("input/graph2.txt"), s = 2, t = 1, SEM = 100, seed = 19)
-zad3Kirchoff(readGraph("input/graph_erdos_renyi.txt"), s = 0, t = 1, SEM = 200, seed = 31)
-zad3Kirchoff(readGraph("input/graph_cubical.txt"), s = 0, t = 1, SEM = 100, seed = 2)
-zad3Kirchoff(readGraph("input/graph_bridge.txt"), s = 0, t = 12, SEM = 200, seed = 173)
-zad3Kirchoff(readGraph("input/graph_2d_net.txt"), s = 0, t = 1, SEM = 1000, seed = 10, NetGraph = True)
-zad3Kirchoff(readGraph("input/graph_small_world.txt"), s = 2, t = 3, SEM = 500, seed = 1, NetGraph = True)
+def zad3NodalAnalysis(Edges, s, t, SEM, seed, NetGraph = False):
+    G = listForm(Edges)
+    E = len(Edges)
+    V = len(G)
+
+    Eqs = [[0 for _ in range(V)] for _ in range(V)]
+    A = [0 for _ in range(V)]
+
+    # Układamy dwa pierwsze, oczywiste równania 
+    # V_s = 0 oraz V_t = SEM
+    Eqs[0][s], Eqs[1][t] = 1, 1
+    A[0], A[1] = 0, SEM
+
+    eq_row = 2
+
+    # Układamy pozostałe V - 2 równań
+    for u in range(V):
+        if u == t or u == s: continue
+        for v, w in G[u]:
+            Eqs[eq_row][u] -= 1 / w
+            Eqs[eq_row][v] += 1 / w
+        eq_row += 1
+
+    # Obliczenie napięć
+    Voltage = np.linalg.solve(Eqs, A)
+    
+    # Obliczenie natężeń prądów, zakładamy
+    # że prąd popłynie od mniejszego wierzchołka
+    # do większego (wiem że mogę już obliczyć poprawny
+    # kierunek przeływu prądu, ale używana później funkcja do rysowania grafów 
+    # wymaga, aby przekazać jej natężenia zgodnie z tym założeniem)
+    Weights = [0 for _ in range(E)]
+    Currents = edgesToCurrents(V, Edges)
+
+    for u, v, w in Edges:
+        if u < v: Weights[Currents[u][v]] = (Voltage[u] - Voltage[v]) / w
+        elif u > v: Weights[Currents[u][v]] = (Voltage[v] - Voltage[u]) / w
+
+    if not testGraph(G, Currents, Weights, s, t):
+        print("Błąd w rozwiązaniu")
+        return
+
+    if NetGraph: draw2DGraph(Edges, Weights, Currents, [s, t])
+    else: drawGraph(Edges, Weights, Currents, seed, [s, t])
+
+
+#zad3Kirchoff(readGraph("input/graph1.txt"), s = 0, t = 1, SEM = 200, seed = 25)
+#zad3NodalAnalysis(readGraph("input/graph1.txt"), s = 0, t = 1, SEM = 200, seed = 25)
+
+#zad3Kirchoff(readGraph("input/graph2.txt"), s = 2, t = 1, SEM = 100, seed = 19)
+#zad3NodalAnalysis(readGraph("input/graph2.txt"), s = 2, t = 1, SEM = 100, seed = 19)
+
+#zad3Kirchoff(readGraph("input/graph_erdos_renyi.txt"), s = 0, t = 1, SEM = 200, seed = 31)
+#zad3NodalAnalysis(readGraph("input/graph_erdos_renyi.txt"), s = 0, t = 1, SEM = 200, seed = 31)
+
+#zad3Kirchoff(readGraph("input/graph_cubical.txt"), s = 0, t = 1, SEM = 100, seed = 2)
+#zad3NodalAnalysis(readGraph("input/graph_cubical.txt"), s = 0, t = 1, SEM = 100, seed = 2)
+
+#zad3Kirchoff(readGraph("input/graph_bridge.txt"), s = 0, t = 12, SEM = 200, seed = 173)
+zad3NodalAnalysis(readGraph("input/graph_bridge.txt"), s = 0, t = 12, SEM = 200, seed = 173)
+
+#zad3Kirchoff(readGraph("input/graph_2d_net.txt"), s = 0, t = 1, SEM = 1000, seed = 10, NetGraph = True)
+#zad3NodalAnalysis(readGraph("input/graph_2d_net.txt"), s = 0, t = 1, SEM = 1000, seed = 10, NetGraph = True)
+
+#zad3Kirchoff(readGraph("input/graph_small_world.txt"), s = 2, t = 3, SEM = 500, seed = 1, NetGraph = True)
+#zad3NodalAnalysis(readGraph("input/graph_small_world.txt"), s = 2, t = 3, SEM = 500, seed = 1, NetGraph = True)
