@@ -285,23 +285,23 @@ def zad3NodalAnalysis(Edges, s, t, SEM, seed, NetGraph = False):
     else: drawGraph(Edges, Weights, Currents, seed, [s, t])
 
 
-#zad3Kirchoff(readGraph("input/graph1.txt"), s = 0, t = 1, SEM = 200, seed = 25)
-#zad3NodalAnalysis(readGraph("input/graph1.txt"), s = 0, t = 1, SEM = 200, seed = 25)
+zad3Kirchoff(readGraph("input/graph1.txt"), s = 0, t = 1, SEM = 200, seed = 25)
+zad3NodalAnalysis(readGraph("input/graph1.txt"), s = 0, t = 1, SEM = 200, seed = 25)
 
-#zad3Kirchoff(readGraph("input/graph2.txt"), s = 2, t = 1, SEM = 100, seed = 19)
-#zad3NodalAnalysis(readGraph("input/graph2.txt"), s = 2, t = 1, SEM = 100, seed = 19)
+zad3Kirchoff(readGraph("input/graph2.txt"), s = 2, t = 1, SEM = 100, seed = 19)
+zad3NodalAnalysis(readGraph("input/graph2.txt"), s = 2, t = 1, SEM = 100, seed = 19)
 
-#zad3Kirchoff(readGraph("input/graph_erdos_renyi.txt"), s = 0, t = 1, SEM = 200, seed = 31)
-#zad3NodalAnalysis(readGraph("input/graph_erdos_renyi.txt"), s = 0, t = 1, SEM = 200, seed = 31)
+zad3Kirchoff(readGraph("input/graph_erdos_renyi.txt"), s = 0, t = 1, SEM = 200, seed = 31)
+zad3NodalAnalysis(readGraph("input/graph_erdos_renyi.txt"), s = 0, t = 1, SEM = 200, seed = 31)
 
-#zad3Kirchoff(readGraph("input/graph_cubical.txt"), s = 0, t = 1, SEM = 100, seed = 2)
-#zad3NodalAnalysis(readGraph("input/graph_cubical.txt"), s = 0, t = 1, SEM = 100, seed = 2)
+zad3Kirchoff(readGraph("input/graph_cubical.txt"), s = 0, t = 1, SEM = 100, seed = 2)
+zad3NodalAnalysis(readGraph("input/graph_cubical.txt"), s = 0, t = 1, SEM = 100, seed = 2)
 
-#zad3Kirchoff(readGraph("input/graph_bridge.txt"), s = 0, t = 12, SEM = 200, seed = 173)
+zad3Kirchoff(readGraph("input/graph_bridge.txt"), s = 0, t = 12, SEM = 200, seed = 173)
 zad3NodalAnalysis(readGraph("input/graph_bridge.txt"), s = 0, t = 12, SEM = 200, seed = 173)
 
-#zad3Kirchoff(readGraph("input/graph_2d_net.txt"), s = 0, t = 1, SEM = 1000, seed = 10, NetGraph = True)
-#zad3NodalAnalysis(readGraph("input/graph_2d_net.txt"), s = 0, t = 1, SEM = 1000, seed = 10, NetGraph = True)
+zad3Kirchoff(readGraph("input/graph_2d_net.txt"), s = 0, t = 1, SEM = 1000, seed = 10, NetGraph = True)
+zad3NodalAnalysis(readGraph("input/graph_2d_net.txt"), s = 0, t = 1, SEM = 1000, seed = 10, NetGraph = True)
 
-#zad3Kirchoff(readGraph("input/graph_small_world.txt"), s = 2, t = 3, SEM = 500, seed = 1, NetGraph = True)
-#zad3NodalAnalysis(readGraph("input/graph_small_world.txt"), s = 2, t = 3, SEM = 500, seed = 1, NetGraph = True)
+zad3Kirchoff(readGraph("input/graph_small_world.txt"), s = 2, t = 3, SEM = 500, seed = 1, NetGraph = True)
+zad3NodalAnalysis(readGraph("input/graph_small_world.txt"), s = 2, t = 3, SEM = 500, seed = 1, NetGraph = True)
