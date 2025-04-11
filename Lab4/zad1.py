@@ -1,20 +1,43 @@
 from random import randint, random
-from math import exp, log
+from math import exp
 import matplotlib.pyplot as plt 
+import numpy as np
 import os, tempfile
 from PIL import Image
 
-# CLOUD GENERATORS
+# GENEROWANIE CHMUR PUNKTÓW
 def random_cloud(n):
     return [(randint(0, 100), randint(0, 100)) for _ in range(n)]
 
-def normal_distribution(n):
-    return []
+def normal_distribution(n, clusters):
+    points = []
+    num_clusters = len(clusters)
+    base_pts = n // num_clusters
+    remainder = n % num_clusters
 
-def nine_groups(n):
-    return[]
+    for i, cluster in enumerate(clusters):
+        pts_for_this_cluster = base_pts + (1 if i < remainder else 0)
+        x, y = np.random.multivariate_normal(cluster["mean"], cluster["cov"], pts_for_this_cluster).T
+        points.extend(zip(x, y))
 
-# LENGTH CALCULATOR
+    return points
+
+def nine_groups(n, padding):
+    clusters = [
+        {"mean": [-padding, padding], "cov": [[600, 400], [400, 600]]},
+        {"mean": [0, padding], "cov": [[600, 400], [400, 600]]},
+        {"mean": [padding, padding], "cov": [[600, 400], [400, 600]]},
+        {"mean": [-padding, 0], "cov": [[600, 400], [400, 600]]},
+        {"mean": [0, 0], "cov": [[600, 400], [400, 600]]},
+        {"mean": [padding, 0], "cov": [[600, 400], [400, 600]]},
+        {"mean": [-padding, -padding], "cov": [[600, 400], [400, 600]]},
+        {"mean": [0, -padding], "cov": [[600, 400], [400, 600]]},
+        {"mean": [padding, -padding], "cov": [[600, 400], [400, 600]]}
+    ]
+
+    return normal_distribution(n, clusters)
+
+# DŁUGOŚĆ ŚCIEŻKI
 def path_length(points, distance):
     size = len(points)
     sum = 0
@@ -24,30 +47,28 @@ def path_length(points, distance):
 
     return sum
 
-# DISTANCE FUNCTIONS
+# DYSTANS
 def euclidean_distance(p1, p2): 
     return ((p1[0] - p2[0]) ** 2 + (p1[1] - p2[1]) ** 2) ** 0.5
 
 def manhatan_distance(p1, p2):
     return abs(p1[0] - p2[0]) + abs(p1[1] - p2[1])
 
-# TEMPERATURE
+# TEMPERATURA
 def euler_temp(x, T0):
     return T0 * exp(-x / T0)
 
-def exponential_temp(x, T0):
-    return T0 * ((0.9) ** x)
+def t0_const_temp(x, T0):
+    return 2000 * exp(-x / T0)
 
-def linear_temp(x, T0):
-    return T0 - 0.01 * x
+def div_const_temp(x, T0):
+    return T0 * exp(-x / 2000)
 
-def log_temp(x, T0):
-    return T0 / log(1 + x)
-
+# PRAWDOPOBIEŃSTWO
 def schedule_prob(E, T):
     return exp(E / T)
 
-# SWAPPING
+# WYSZUKIWANIE NASTĘPNEGO STANU
 def arbitrary_swap(state: list):
     result = state[:]
     size = len(state)
@@ -62,15 +83,15 @@ def arbitrary_swap(state: list):
 def consecutive_swap(state: list):
     result = state[:]
     size = len(state)
-    i = randint(0, size - 1)
+    i = randint(0, size - 2)
 
     result[i], result[i + 1] = result[i + 1], result[i]
     return result
 
-# SIMULATED ANNEALING
+# SYMULOWANE WYŻARZANIE
 # Generowanie GIFa pozostawiam jako opcjonalne, ponieważ zabiera dużo czasu.
 def simulated_annealing(points, max_iter, initial_temp, 
-                        temp_fun, neighbour_fun, distance_fun, make_gif = False):
+                        neighbour_fun, distance_fun, make_gif = False):
     xs, ys = [], []
     frame_paths = []  
     temp_dir = None
@@ -79,15 +100,19 @@ def simulated_annealing(points, max_iter, initial_temp,
     # będę zapisywał wygenerowane klatki GIFa
     if make_gif:
         fig, ax = plt.subplots()
+        ax.set_xlim(min([x for x, _ in points]) - 5, max([x for x, _ in points]) + 5)
+        ax.set_ylim(min([y for _, y in points]) - 5, max([y for _, y in points]) + 5)
         line, = ax.plot([], [], "ro-")
         title = ax.set_title("Wizualizacja działania")
         plt.tight_layout()
+        plt.grid(True)
         temp_dir = tempfile.mkdtemp()
 
     # Algorytm wyżarzania
     for i in range(1, max_iter + 1):
-        T = temp_fun(i, initial_temp)
+        T = euler_temp(i, initial_temp)
         if T < 1e-12: break
+
         candidate = neighbour_fun(points)
         
         E = path_length(points, distance_fun) - \
@@ -104,16 +129,16 @@ def simulated_annealing(points, max_iter, initial_temp,
         xs.append(i)
         ys.append(path_length(points, distance_fun))
 
-        if make_gif and (i - 1) % 10 == 0:
+        if make_gif and (i - 1) % 500 == 0:
             # Zapis klatki to pliku
             x_coords = [x for x, _ in points]
             y_coords = [y for _, y in points]
+            x_coords.append(points[0][0])
+            y_coords.append(points[0][1])
             line.set_data(x_coords, y_coords)
 
-            ax.set_xlim(-5, 105)
-            ax.set_ylim(-5, 105)
-            title.set_text(f"Progres = {i * 100 / max_iter}%")
-            print(f"Generowanie klatek... {i * 100 / max_iter}%")
+            title.set_text(f"Progres = {round(i * 100 / max_iter, 2)}%")
+            print(f"Generowanie klatek... {round(i * 100 / max_iter, 2)}%")
             
             frame_path = os.path.join(temp_dir, f"frame_{i:05d}.png")
             fig.savefig(frame_path, dpi=80)
@@ -151,21 +176,75 @@ def simulated_annealing(points, max_iter, initial_temp,
     # Przedstawiamy na wykresie uzyskane rozwiązanie
     fig, axs = plt.subplots(2)
     axs[0].plot(xs, ys)
-    axs[0].set_title(f"Wynik algorytmu dla {max_iter} wykonań")
+    axs[0].set_title(f"Wynik algorytmu dla {max_iter} wykonań, n = {len(points)}")
     axs[0].set_xlabel("Ilość iteracji")
     axs[0].set_ylabel("Długość ścieżki")
-
+    
     x_coords = [x for x, _ in points]
     y_coords = [y for _, y in points]
+
+    x_coords.append(points[0][0])
+    y_coords.append(points[0][1])
+
     axs[1].plot(x_coords, y_coords, "ro-")
     axs[1].set_title(f"Znaleziona ścieżka o długości " 
                     f"{round(path_length(points, distance_fun), 2)}")
 
+    plt.grid(True)
     plt.tight_layout()
     plt.show()
 
-init_temp = 1000
-max_iter = 10000
-#simulated_annealing(random_cloud(10), max_iter, init_temp, euler_temp, arbitrary_swap, euclidean_distance, True)
-#simulated_annealing(random_cloud(20), 2 * max_iter, 2 * init_temp, euler_temp, arbitrary_swap, euclidean_distance, True)
-#simulated_annealing(random_cloud(50), 5 * max_iter, 5 * init_temp, euler_temp, arbitrary_swap, euclidean_distance, True)
+def simulated_annealing_temp_test(points, max_iter, initial_temp, temp_fun):
+    xs, ys = [], []
+    tx, ty = [], []
+
+    for i in range(1, max_iter + 1):
+        T = temp_fun(i, initial_temp)
+        tx.append(i)
+        ty.append(T)
+        if T < 1e-12: break
+        candidate = arbitrary_swap(points)
+        
+        E = path_length(points, euclidean_distance) - \
+            path_length(candidate, euclidean_distance)
+        if E > 0:
+            points = candidate[:]
+        else:
+            prob = schedule_prob(E, T)
+            if random() < prob:
+                points = candidate[:]
+
+        xs.append(i)
+        ys.append(path_length(points, euclidean_distance))
+
+    _, axs = plt.subplots(3)
+    axs[0].plot(xs, ys)
+    axs[0].set_title(f"Wynik algorytmu dla {max_iter} wykonań, n = {len(points)}")
+    axs[0].set_xlabel("Ilość iteracji")
+    axs[0].set_ylabel("Długość ścieżki")
+
+    axs[1].plot(tx, ty)
+    axs[1].set_title(f"Funkcja temperatury")
+
+    axs[2].plot([x for x, _ in points], [y for _, y in points], "ro-")
+    axs[2].set_title(f"Znaleziona ścieżka o długości " 
+                    f"{round(path_length(points, euclidean_distance), 2)}")
+
+    plt.tight_layout()
+    plt.show()
+
+def print_fun(fun, x1, xn, T0):
+    xs, ys = [], []
+    for x in range(x1, xn + 1):
+        xs.append(x)
+        ys.append(fun(x, T0))
+    plt.plot(xs, ys)
+    plt.tight_layout()
+    plt.show()
+
+temp = 2000
+iter = 20000
+
+#simulated_annealing(nine_groups(30, 200), 3 * iter, 4 * temp, arbitrary_swap, euclidean_distance, True)
+#simulated_annealing(nine_groups(50, 200), 5 * iter, 6 * temp, arbitrary_swap, euclidean_distance, True)
+simulated_annealing(nine_groups(70, 200), 7 * iter, 8 * temp, arbitrary_swap, euclidean_distance, True)
