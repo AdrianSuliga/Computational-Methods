@@ -1,7 +1,9 @@
 import matplotlib.pyplot as plt
 from random import random, randint
 from math import exp
-from time import time
+import os, tempfile
+from PIL import Image
+import numpy as np
 
 def random_image(n:int, delta:float):
     M = [[1 if random() > delta else 0 for _ in range(n)] for _ in range(n)]
@@ -120,11 +122,16 @@ def calculate_point_energy_difference(points, P1, P2, point_energy_function, off
 
     return end_energy - start_energy
 
-def simulated_annealing(points, max_iter, init_temp, point_energy_function, offsets, a):
+def simulated_annealing(points, max_iter, init_temp, point_energy_function, offsets, a, make_gif = False):
     xs, ys = [], []
     T = init_temp
+    temp_dir = None
 
     all_energy = calculate_energy(points, point_energy_function)
+
+    if make_gif:
+        temp_dir = tempfile.mkdtemp()
+        frame_paths = []
 
     for i in range(1, max_iter + 1):
         T = temp_fun(T, a)
@@ -144,6 +151,42 @@ def simulated_annealing(points, max_iter, init_temp, point_energy_function, offs
         xs.append(i)
         ys.append(all_energy)
 
+        if make_gif and i % 4000 == 0:
+            print(f"Generowanie klatek... {round(i * 100 / max_iter, 2)}%")
+            img_array = np.array(points, dtype = np.uint8) * 255
+            img = Image.fromarray(img_array, mode='L')
+            frame_path = os.path.join(temp_dir, f"frame_{i:04d}.png")
+            img.save(frame_path)
+            frame_paths.append(frame_path)
+
+    if make_gif:
+        print("Wygenerowano dane\nTworzenie pliku GIF, może to chwilę potrwać...")
+        try:
+            with Image.open(frame_paths[0]) as first_frame:
+                other_frames = [Image.open(f) for f in frame_paths[1:]]
+                first_frame.save(
+                    'animation.gif',
+                    format = 'GIF',
+                    append_images = other_frames,
+                    save_all = True,
+                    duration = 10,
+                    loop = 0
+                )
+                for frame in other_frames:
+                    frame.close()
+        except Exception as e:
+            print(f"Error creating GIF: {e}")
+            
+        for frame_path in frame_paths:
+            try:
+                os.remove(frame_path)
+            except:
+                pass
+        try:
+            os.rmdir(temp_dir)
+        except:
+            pass
+
     plt.imshow(points, cmap = 'gray', interpolation = 'nearest')
     plt.axis('off')
     plt.grid(True)
@@ -154,6 +197,4 @@ def simulated_annealing(points, max_iter, init_temp, point_energy_function, offs
     plt.show()
 
 offsets = [(-1, -1), (1, 1), (1, -1), (-1, 1), (-2, -2), (2, 2), (2, -2), (-2, 2)]
-simulated_annealing(random_image(100, 0.1), 1000000, 100, point_energy_8_neighbours_cross, offsets, 1e-5)
-simulated_annealing(random_image(100, 0.2), 1000000, 100, point_energy_8_neighbours_cross, offsets, 1e-5)
-simulated_annealing(random_image(100, 0.4), 1000000, 100, point_energy_8_neighbours_cross, offsets, 1e-5)
+simulated_annealing(random_image(400, 0.4), 10000000, 100, point_energy_8_neighbours_cross, offsets, 1e-5, True)
