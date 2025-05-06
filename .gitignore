@@ -4,4 +4,5 @@ share/
 .vscode/
 lib64
 pyvenv.cfg
-
+etc/
+**/lab4-jupyter/
