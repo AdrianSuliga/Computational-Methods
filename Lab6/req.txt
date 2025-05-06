@@ -1,0 +1,3 @@
+ANN - Aproximate Nearest Neighbour
+HNSW - Hierarchical Navigable Small World Graphs
+
