@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" type="text/css" href="static/index.css">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Wiki Search</title>
+</head>
+<body>
+    <div class="container">
+        <h1><a id="noAnchor" href="/">Wiki Search</a></h1>
+        <form action="/search" method="get" class="form-card">
+            <input type="text" name="q" class="input-search" placeholder="Enter your search..." />
+            <div class="form-row">
+                <label>Results size:</label>
+                <input type="text" name="output_size" class="input-size" value="10" />
+            </div>
+            <div class="form-row">
+                <label>Use SVD:</label>
+                <input type="checkbox" name="use_svd" {% if use_svd %} checked {% endif %}>
+            </div>
+            <button type="submit">Search</button>
+        </form>
+    </div>
+</body>
+</html>

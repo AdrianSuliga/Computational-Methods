@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" type="text/css" href="static/search.css">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Wiki Search</title>
+</head>
+<body>
+    <div class="mainDiv">
+        <h1><a id="noAnchor" href="/">Wiki Search</a></h1>
+        <form action="/search" method="get" class="form-card">
+            <div class="inputDiv">
+                <input type="text" name="q" value="{{ input_string }}" placeholder="Enter your search..." class="input-search"/>
+                <button type="submit" class="btn-submit">Search</button>
+                <div class="form-row">
+                    <label>Results size:</label>
+                    <input type="text" name="output_size" class="input-size" value="10" />
+                </div>
+                <div class="form-row">
+                    <label>Use SVD:</label>
+                    <input type="checkbox" name="use_svd" {% if use_svd %} checked {% endif %}>
+                </div>
+            </div>
+        </form>
+        <br><br>
+        {% if links %}
+            <h2>Search Results</h2>
+            <h3>Response Time: {{ response_time }}</h3>
+            <ul class="result-list">
+                {% for link in links %}
+                    <li>
+                        <p>[{{ link.value }}]</p>
+                        <a href="{{ link.url }}" target="_blank">{{ link.title }}</a> 
+                    </li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+    </div>
+</body>
+</html>
