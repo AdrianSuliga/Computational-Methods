@@ -111,7 +111,7 @@ def mark_matches(img_path: str, pattern_path: str, corelation, threshold: float)
     plt.axis("off")
     plt.show()
 
-img_folder = "images/"
+img_folder = "images_ex1/"
 img_path = "fish.png"
 pattern_path = "fish_m.png"
 
