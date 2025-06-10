@@ -1,7 +1,6 @@
 from PIL import Image, ImageDraw
 import numpy as np
 import matplotlib.pyplot as plt
-from copy import deepcopy
 
 def invert_img(path: str, folder_path: str, mode: str = "c") -> str:
     img = Image.open(f"{folder_path}{path}").convert("L")
